@@ -1,0 +1,12 @@
+Aşağıdaki pazaryeri konuşmasını analiz et ve dolandırıcılık bayraklarını tespit et.
+
+Yalnızca şu bayrak ID'lerini kullanabilirsin:
+{flag_ids}
+
+Her tespit ettiğin bayrak için şunları belirt:
+- flag_id: yukarıdaki listeden tam ID
+- detail: bu konuşmada neden bu bayrağı tetiklediğine dair kısa açıklama (max 100 karakter)
+- confidence: 0.0-1.0 arası güven skoru
+
+Konuşma:
+{conversation}

@@ -1,0 +1,9 @@
+Aşağıdaki pazaryeri konuşmasından şu bilgileri JSON olarak çıkar:
+- messages: konuşma mesajları listesi (role, content)
+- urls: geçen tüm URL'ler
+- ibans: geçen tüm IBAN numaraları
+- price_mentions: fiyat ifadeleri
+- platform: hangi platform (sahibinden, letgo, instagram, whatsapp, diğer)
+
+Konuşma:
+{conversation}
