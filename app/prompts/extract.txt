@@ -1,9 +1,12 @@
-Aşağıdaki pazaryeri konuşmasından şu bilgileri JSON olarak çıkar:
-- messages: konuşma mesajları listesi (role, content)
-- urls: geçen tüm URL'ler
-- ibans: geçen tüm IBAN numaraları
-- price_mentions: fiyat ifadeleri
-- platform: hangi platform (sahibinden, letgo, instagram, whatsapp, diğer)
+Aşağıdaki pazaryeri yazışmasını analiz et ve yalnızca ham veri çıkar.
 
-Konuşma:
-{conversation}
+HÜKÜM VERME — dolandırıcılık değerlendirmesi yapma, yorum ekleme.
+
+Çıkarılacaklar:
+- turns: konuşmadaki her mesajı "Alıcı: ..." veya "Satıcı: ..." formatında liste olarak ver. Kim yazdığı belli değilse "Taraf A / Taraf B" kullan.
+- urls: metinde geçen tüm URL veya link benzeri dizeler (kısaltılmış linkler dahil).
+- ibans: TR ile başlayan veya IBAN formatında görünen tüm hesap numaraları.
+- fiyat: konuşmada geçen ana işlem fiyatı (örn. "850 TL"). Birden fazla varsa en son anlaşılan. Yoksa null.
+- urun: satışa konu olan ürün veya hizmet kısa adı. Yoksa null.
+
+Çıktı yalnızca JSON olacak, başka açıklama ekleme.
