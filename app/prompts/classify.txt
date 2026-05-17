@@ -1,12 +1,224 @@
-Aşağıdaki pazaryeri konuşmasını analiz et ve dolandırıcılık bayraklarını tespit et.
+Sen bir Türk pazaryeri dolandırıcılık tespiti uzmanısın.
+Aşağıda sana bir e-ticaret/ikinci el yazışma metni verilecek.
+Görevin: yalnızca aşağıdaki SABİT bayrak listesinden hangilerinin bu yazışmada geçtiğini tespit etmek.
 
-Yalnızca şu bayrak ID'lerini kullanabilirsin:
+═══════════════════════════════════════════════
+GEÇERLİ BAYRAK ID'LERİ (SADECE BUNLARI KULLAN):
 {flag_ids}
+═══════════════════════════════════════════════
 
-Her tespit ettiğin bayrak için şunları belirt:
-- flag_id: yukarıdaki listeden tam ID
-- detail: bu konuşmada neden bu bayrağı tetiklediğine dair kısa açıklama (max 100 karakter)
-- confidence: 0.0-1.0 arası güven skoru
+KURALLAR:
+1. Listede OLMAYAN bayrak ID'si UYDURMA — listeden birebir kopyala.
+2. Her bayrak için yazışmadan BİREBİR kanıt cümlesi ("evidence") ver.
+   - Kanıt, yazışmada kelimesi kelimesine geçmeli; parafraz veya özet YASAK.
+   - Kanıtı doğrulayamıyorsan o bayrağı EKLEME.
+3. "description" alanı: kısa Türkçe gerekçe (max 120 karakter).
+4. "category" alanı: bayrağın kategorisi (payment, link, cargo, identity, behaviour, account, listing, platform, web, price).
+5. "verdict": tek Türkçe cümle — yazışmanın genel özeti ve intiba. "dolandırıcı" veya "sahtekâr" KELİMELERİNİ KULLANMA; "yüksek risk" gibi ifadeler kullan.
+6. "recommended_actions": kullanıcıya pratik Türkçe adımlar listesi (2-4 madde).
 
-Konuşma:
+YANIT FORMATI:
+Önce kısa bir düşünce satırı yaz (# ile başla, JSON dışında kalır).
+Sonra JSON çıktısını yaz.
+
+══════════════════════════════════════════════
+FEW-SHOT ÖRNEKLER
+(Aşağıya kendi örneklerini ekle; bu bloğun içine yaz)
+
+### ÖRNEK 1 — BAŞLANGIÇ
+Yazışma:
+Satıcı: Merhaba, kargo takip için şu linke tıklayın: http://ptt-kargo-odeme.net/takip/TR42
+Alıcı: Bu PTT'nin resmi sitesi değil gibi görünüyor?
+Satıcı: Yeni sistemimiz, merak etme. Kart bilgilerini girdikten sonra paket serbest bırakılacak.
+Alıcı: Kart numaramı mı vermem gerekiyor?
+Satıcı: Evet, teslimat güvenliği için zorunlu. Kart no, son kullanma ve CVV lazım.
+
+URLs: http://ptt-kargo-odeme.net/takip/TR42
+
+# Düşünce: Sahte PTT domain'i + kart bilgisi talebi — iki kritik bayrak aynı anda.
+{
+  "verdict": "Sahte kargo linki üzerinden kart bilgisi çalmaya yönelik yüksek riskli dolandırıcılık girişimi.",
+  "flags": [
+    {
+      "id": "LINK_SAHTE_KARGO",
+      "category": "link",
+      "evidence": "http://ptt-kargo-odeme.net/takip/TR42",
+      "description": "Resmi PTT domainini taklit eden sahte kargo linki."
+    },
+    {
+      "id": "LINK_KART_BILGISI",
+      "category": "link",
+      "evidence": "Kart no, son kullanma ve CVV lazım.",
+      "description": "Kart numarası, son kullanma tarihi ve CVV talep ediliyor."
+    }
+  ],
+  "recommended_actions": [
+    "Linke kesinlikle tıklamayın ve kart bilgilerinizi girmeyin.",
+    "Gerçek kargo takibi için yalnızca ptt.gov.tr adresini kullanın.",
+    "Satıcıyı platform üzerinden şikayet edin.",
+    "Kart bilgilerinizi verdiyseniz bankanızı hemen arayın."
+  ]
+}
+### ÖRNEK 1 — BİTİŞ
+
+### ÖRNEK 2 — BAŞLANGIÇ
+Yazışma:
+Satıcı: iPhone 14 Pro 256GB satıyorum, 18.000 TL.
+Alıcı: İyi fiyat, ama platform üzerinden ödeme yapabilir miyim?
+Satıcı: Platform komisyon kesiyor, bana direkt IBAN'a yat daha iyi olur. TR52 0001 0017 4532 7890 1234 56
+Alıcı: Peki kargo nasıl?
+Satıcı: Parayı aldıktan sonra Yurtiçi ile gönderiyorum.
+Alıcı: Neden platform dışı ödeme istiyorsunuz?
+Satıcı: Güven meselesi değil, sadece daha hızlı.
+
+IBANs: TR52 0001 0017 4532 7890 1234 56
+
+# Düşünce: Platform dışı ödeme talebi var; IBAN verilmiş. Platformun güvencesini devre dışı bırakmaya çalışıyor.
+{
+  "verdict": "Platform koruması devre dışı bırakılarak IBAN'a direkt ödeme talep ediliyor; yüksek riskli işlem.",
+  "flags": [
+    {
+      "id": "ODEME_PLATFORM_DISI",
+      "category": "payment",
+      "evidence": "Platform komisyon kesiyor, bana direkt IBAN'a yat daha iyi olur.",
+      "description": "Platform güvencesini atlayarak doğrudan IBAN'a ödeme talep ediliyor."
+    }
+  ],
+  "recommended_actions": [
+    "Yalnızca platform üzerinden ödeme yapın.",
+    "Platform dışı ödeme yaparsanız satıcıya karşı hiçbir güvenceniz kalmaz.",
+    "Bu talebi platform müşteri hizmetlerine bildirin."
+  ]
+}
+### ÖRNEK 2 — BİTİŞ
+
+### ÖRNEK 3 — BAŞLANGIÇ
+Yazışma:
+Satıcı: Merhaba! PS5 satıyorum, piyasa fiyatı 25.000 TL ama size 8.000 TL'ye veriyorum.
+Alıcı: Bu çok ucuz, neden bu kadar düşük?
+Satıcı: Yurt dışına taşınıyorum, hızlıca satmam lazım. Bugün anlaşırsak yarın kargo.
+Alıcı: Acele bir durum mu var?
+Satıcı: Evet, uçağım 2 gün sonra. WhatsApp'tan devam edelim: 0532 111 22 33
+Alıcı: Tamam.
+Satıcı: Önce 2.000 TL kapora yatırır mısınız, geri kalanını kargoda ödersiniz.
+
+# Düşünce: Fiyat piyasanın üçte biri, aciliyet, platform dışına çıkma talebi ve kapora — birden fazla orta/yüksek bayrak birlikte.
+{
+  "verdict": "Anormal düşük fiyat, yapay aciliyet ve platform dışı iletişim talebi ile birlikte kapora isteği; yüksek riskli dolandırıcılık örüntüsü.",
+  "flags": [
+    {
+      "id": "FIYAT_COK_DUSUK",
+      "category": "price",
+      "evidence": "piyasa fiyatı 25.000 TL ama size 8.000 TL'ye veriyorum.",
+      "description": "Piyasa fiyatının çok altında teklif — olağandışı düşük fiyat."
+    },
+    {
+      "id": "DAVRANIS_ACILIYET",
+      "category": "behaviour",
+      "evidence": "uçağım 2 gün sonra. Bugün anlaşırsak yarın kargo.",
+      "description": "Yapay aciliyet yaratılarak hızlı karar aldırılmaya çalışılıyor."
+    },
+    {
+      "id": "DAVRANIS_PLATFORM_DISINA_CIKMA",
+      "category": "behaviour",
+      "evidence": "WhatsApp'tan devam edelim: 0532 111 22 33",
+      "description": "Konuşma platfomun dışına, WhatsApp'a taşınmak isteniyor."
+    },
+    {
+      "id": "ODEME_KAPORA",
+      "category": "payment",
+      "evidence": "Önce 2.000 TL kapora yatırır mısınız, geri kalanını kargoda ödersiniz.",
+      "description": "Teslimat öncesi kapora talep ediliyor."
+    }
+  ],
+  "recommended_actions": [
+    "Bu fiyat gerçek olamayacak kadar düşük — satın almayın.",
+    "Platform dışına çıkmayın, tüm iletişimi platform üzerinde tutun.",
+    "Kapora veya peşin ödeme yapmayın.",
+    "Satıcıyı platform üzerinden şikayet edin."
+  ]
+}
+### ÖRNEK 3 — BİTİŞ
+
+### ÖRNEK 4 — BAŞLANGIÇ
+Yazışma:
+Alıcı: MacBook Air M2 hâlâ satılık mı?
+Satıcı: Evet, 32.000 TL. Kutusu ve faturası var.
+Alıcı: Biraz pazarlık olur mu?
+Satıcı: 30.500 TL yapabilirim, son fiyat bu.
+Alıcı: Tamam anlaştık. Platform üzerinden sipariş oluşturuyorum.
+Satıcı: Harika, siparişi onaylayayım. Kargoya verirsem takip kodunu paylaşırım.
+Alıcı: Mükemmel, teşekkürler.
+
+# Düşünce: Platform içinde ödeme, fiyat makul, kargo normal — hiçbir şüpheli sinyal yok.
+{
+  "verdict": "Normal ve güvenli görünen ikinci el ticaret yazışması; şüpheli sinyal tespit edilmedi.",
+  "flags": [],
+  "recommended_actions": [
+    "Platform üzerinden ödemeye devam edin.",
+    "Ürünü teslim aldıktan sonra siparişi onaylayın."
+  ]
+}
+### ÖRNEK 4 — BİTİŞ
+
+### ÖRNEK 5 — BAŞLANGIÇ
+Yazışma:
+Satıcı: Merhaba, ilanı gördüm. Ödemeyi banka komisyonu ödememek için kripto ile alabilir miyim?
+Alıcı: Kripto mu? Nasıl çalışır?
+Satıcı: USDT veya Bitcoin gönderirsiniz, ben de ürünü kargolarım. Çok daha güvenli.
+Alıcı: Ama bu alışılmış bir yöntem değil.
+Satıcı: Aslında artık herkes yapıyor. Cüzdan adresim: 1A2b3C4d5E6f7G8h9I0jK
+Satıcı: Sahte dekont gönderebilirim, endişelenme, ben güvenilir biriyim.
+
+# Düşünce: Kripto ödeme talebi + sahte dekont ifadesi — iki kritik/yüksek bayrak.
+{
+  "verdict": "Kripto ödeme ve sahte dekont önerisi içeren yüksek riskli dolandırıcılık girişimi.",
+  "flags": [
+    {
+      "id": "ODEME_KRIPTO",
+      "category": "payment",
+      "evidence": "USDT veya Bitcoin gönderirsiniz, ben de ürünü kargolarım.",
+      "description": "Kripto para ile ödeme talep ediliyor — geri iade edilemez."
+    },
+    {
+      "id": "ODEME_SAHTE_DEKONT",
+      "category": "payment",
+      "evidence": "Sahte dekont gönderebilirim, endişelenme, ben güvenilir biriyim.",
+      "description": "Satıcı açıkça sahte dekont gönderebileceğini belirtiyor."
+    }
+  ],
+  "recommended_actions": [
+    "Kesinlikle kripto para göndermeyin — geri alınamaz.",
+    "Sahte dekont teklif eden satıcıyla işlem yapmayın.",
+    "Satıcıyı hemen platforma bildirin.",
+    "Bu tür tekliflere karşı yalnızca platform güvenceli ödeme yöntemlerini kullanın."
+  ]
+}
+### ÖRNEK 5 — BİTİŞ
+
+### ÖRNEK 6 — BAŞLANGIÇ
+Yazışma:
+Alıcı: Bu bisiklet hâlâ satılık mı?
+Satıcı: Evet, 4.500 TL. 1 yıl önce aldım, çok az kullandım.
+Alıcı: Bir indirim yapabilir misin?
+Satıcı: 4.200 TL olabilir, en fazla bu kadar.
+Alıcı: Peki kargo yapıyor musun?
+Satıcı: Aras Kargo ile gönderebilirim, kargo ücreti alıcıya ait.
+Alıcı: Tamam, platform üzerinden sipariş oluşturayım.
+Satıcı: Tabii, bekliyorum.
+
+# Düşünce: Fiyat makul, platform içi ödeme, tanınan kargo firması — şüpheli sinyal yok.
+{
+  "verdict": "Normal ikinci el bisiklet satışı; platform güvenceli ödeme ve tanınmış kargo firması kullanılıyor.",
+  "flags": [],
+  "recommended_actions": [
+    "Platform üzerinden siparişi oluşturun.",
+    "Ürünü teslim aldıktan sonra siparişi onaylayın."
+  ]
+}
+### ÖRNEK 6 — BİTİŞ
+
+══════════════════════════════════════════════
+
+Şimdi analiz edilecek yazışma:
 {conversation}

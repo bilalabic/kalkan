@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     gemini_api_key: str
     gemini_model: str = "gemini-2.5-flash"
+    thinking_budget: int = 8192  # 0 = disabled; gemini-2.5-flash max 24576
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

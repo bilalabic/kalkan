@@ -4,14 +4,1398 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kalkan — Dolandırıcılık Tespiti</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <meta name="description" content="Türk pazaryeri yazışmalarında yapay zeka destekli dolandırıcılık risk analizi." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+/* ============================================================
+   KALKAN — light, warm, split layout
+   ============================================================ */
+:root {
+  --bg:        oklch(0.97 0.008 75);
+  --bg-2:      oklch(0.95 0.010 75);
+  --surface:   #ffffff;
+  --surface-2: oklch(0.98 0.005 75);
+  --line:      oklch(0.88 0.010 75);
+  --line-soft: oklch(0.92 0.008 75);
+  --ink:    oklch(0.20 0.018 255);
+  --ink-2:  oklch(0.38 0.018 255);
+  --ink-3:  oklch(0.55 0.018 255);
+  --ink-4:  oklch(0.70 0.012 255);
+  --accent:      oklch(0.55 0.16 35);
+  --accent-2:    oklch(0.50 0.17 30);
+  --accent-soft: oklch(0.55 0.16 35 / 0.10);
+  --red:    oklch(0.55 0.20 25);
+  --amber:  oklch(0.62 0.14 80);
+  --sage:   oklch(0.48 0.11 155);
+  --r:    14px;
+  --r-sm: 10px;
+  --r-lg: 20px;
+  --shadow-sm: 0 1px 2px oklch(0.3 0.02 60 / 0.06), 0 0 0 1px oklch(0.3 0.02 60 / 0.04);
+  --shadow:    0 1px 3px oklch(0.3 0.02 60 / 0.06), 0 8px 24px -8px oklch(0.3 0.02 60 / 0.10);
+}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.root { min-height: 100%; position: relative; }
+
+/* HEADER */
+.header {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 32px;
+  background: oklch(0.97 0.008 75 / 0.85);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 9px; color: var(--accent); }
+.brand-mark { color: var(--accent); }
+.brand-word {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.025em;
+}
+.nav { display: flex; align-items: center; gap: 8px; }
+.nav a {
+  color: var(--ink-3); text-decoration: none; font-size: 13.5px;
+  padding: 7px 12px; border-radius: 8px;
+  transition: color 0.15s, background 0.15s;
+}
+.nav a:hover { color: var(--ink); background: var(--bg-2); }
+.nav-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: inherit; font-size: 13.5px;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.nav-link:hover { background: var(--surface); border-color: var(--ink-4); color: var(--ink); }
+.nav-link svg { color: var(--accent); }
+
+/* LAYOUT */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 480px) 1fr;
+  align-items: stretch;
+  min-height: calc(100vh - 58px);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.pane { position: relative; }
+.pane-left {
+  padding: 40px 32px 40px 32px;
+  border-right: 1px solid var(--line);
+}
+.pane-left .pane-inner { position: sticky; top: 80px; }
+.pane-right {
+  padding: 40px 40px 80px;
+  background: linear-gradient(180deg, transparent 0%, oklch(0.95 0.010 75 / 0.4) 100%);
+}
+
+/* INTRO */
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 4px 0;
+}
+.eyebrow.ink { color: var(--ink-3); }
+.eyebrow .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px oklch(0.55 0.16 35 / 0.18);
+}
+.dot.pulse { animation: dotPulse 1.4s ease-in-out infinite; }
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 0 3px oklch(0.55 0.16 35 / 0.18); }
+  50%      { box-shadow: 0 0 0 7px oklch(0.55 0.16 35 / 0.05); }
+}
+.title {
+  font-size: clamp(28px, 2.6vw, 36px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+  margin: 14px 0 14px;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.title-accent { color: var(--accent); font-weight: 500; }
+.lede { color: var(--ink-2); font-size: 14.5px; margin: 0 0 28px; max-width: 360px; }
+
+/* COMPOSER */
+.composer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  transition: opacity 0.2s;
+}
+.composer.is-busy { opacity: 0.55; pointer-events: none; }
+.composer-text {
+  width: 100%;
+  min-height: 130px;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font: inherit;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  resize: vertical;
+  padding: 4px;
+}
+.composer-text::placeholder { color: var(--ink-4); }
+.composer-text:focus { outline: none; }
+.thumbs {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line-soft);
+  margin-top: 6px;
+}
+.thumb {
+  position: relative;
+  width: 80px; height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+.thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.thumb-x {
+  position: absolute; top: 3px; right: 3px;
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  border: none; cursor: pointer;
+  background: oklch(0.18 0.02 255 / 0.85);
+  color: white;
+  border-radius: 50%;
+  font-size: 13px; line-height: 1;
+}
+.thumb-x:hover { background: var(--red); }
+.composer-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  gap: 10px;
+}
+.composer-left { display: flex; align-items: center; gap: 10px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: inherit; font-size: 13px;
+  padding: 7px 11px;
+  color: var(--ink);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.chip:hover:not(:disabled) { background: var(--surface-2); border-color: var(--ink-4); }
+.chip:disabled { opacity: 0.5; cursor: not-allowed; }
+.chip-count {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 1px 5px; border-radius: 4px;
+}
+.link-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--accent); font: inherit; font-size: 13px;
+}
+.link-btn:hover { text-decoration: underline; }
+.primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: inherit; font-size: 14px; font-weight: 500;
+  padding: 9px 16px;
+  color: white;
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 9px;
+  cursor: pointer;
+  box-shadow: 0 1px 0 oklch(1 0 0 / 0.15) inset;
+  transition: transform 0.12s, opacity 0.12s;
+}
+.primary:hover:not(:disabled) { transform: translateY(-1px); }
+.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.composer-meta {
+  margin-top: 12px;
+  padding: 10px 4px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.switch { display: inline-flex; align-items: flex-start; gap: 10px; cursor: pointer; user-select: none; }
+.switch input { display: none; }
+.switch-track {
+  position: relative;
+  width: 30px; height: 17px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.switch-thumb {
+  position: absolute; top: 1px; left: 1px;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--ink-3);
+  transition: transform 0.2s, background 0.2s;
+}
+.switch.on .switch-track { background: var(--accent); border-color: var(--accent); }
+.switch.on .switch-thumb { transform: translateX(13px); background: white; }
+.switch-text {
+  color: var(--ink); font-size: 13px;
+  display: flex; flex-direction: column;
+  line-height: 1.4;
+}
+.switch-text svg { color: var(--accent); margin-right: 4px; vertical-align: -2px; }
+.switch-text .muted { color: var(--ink-3); font-size: 12px; }
+.trust-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.trust-item { display: inline-flex; align-items: center; gap: 7px; }
+.trust-item svg { color: var(--accent); }
+.trust-link {
+  font: inherit; font-size: 12.5px;
+  color: var(--accent);
+  background: none; border: none; padding: 0; cursor: pointer;
+}
+.trust-link:hover { text-decoration: underline; }
+
+/* MODAL */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: oklch(0.20 0.018 255 / 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: grid; place-items: center;
+  z-index: 100;
+  padding: 24px;
+  animation: backdropIn 0.18s ease;
+}
+@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  width: 100%; max-width: 560px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px -16px oklch(0.20 0.018 255 / 0.30);
+  overflow: hidden;
+  animation: modalIn 0.22s cubic-bezier(.2,.7,.2,1);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-head {
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 14px; align-items: flex-start;
+  padding: 22px 22px 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.modal-icon {
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 10px;
+}
+.modal-title {
+  font-size: 19px; font-weight: 600; letter-spacing: -0.02em;
+  margin: 4px 0 0; line-height: 1.25;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.modal-x {
+  font: inherit; font-size: 22px; line-height: 1;
+  background: transparent; border: none;
+  color: var(--ink-3);
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid; place-items: center;
+  align-self: flex-start;
+  margin-top: -2px;
+}
+.modal-x:hover { background: var(--bg-2); color: var(--ink); }
+.modal-list {
+  margin: 0; padding: 18px 22px 8px;
+  list-style: none;
+  display: flex; flex-direction: column;
+  gap: 14px;
+}
+.modal-list li {
+  display: flex; flex-direction: column; gap: 3px;
+  padding-left: 18px;
+  position: relative;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+.modal-list li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 9px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.modal-list li strong { color: var(--ink); font-weight: 600; font-size: 14px; }
+.modal-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 22px 20px;
+  margin-top: 6px;
+}
+.modal-foot-meta {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--ink-4);
+  letter-spacing: 0.05em;
+}
+
+/* RIGHT PANE shared */
+.idle, .loading, .result, .error-state {
+  display: flex; flex-direction: column;
+  gap: 18px;
+  animation: rise 0.35s ease;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* IDLE */
+.idle-head { margin-bottom: 4px; }
+.idle-h {
+  font-size: 24px; font-weight: 600; letter-spacing: -0.02em;
+  line-height: 1.2; margin: 8px 0 0;
+  text-wrap: balance;
+}
+.patterns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.pattern {
+  display: flex; gap: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.pattern:hover { border-color: var(--ink-4); transform: translateY(-1px); }
+.pattern-id {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9.5px;
+  color: var(--ink-3);
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  padding: 3px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+  align-self: flex-start;
+  white-space: nowrap;
+  word-break: break-all;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pattern-t { font-size: 13.5px; font-weight: 500; margin-bottom: 2px; }
+.pattern-d { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+.how {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.how-row {
+  display: grid; grid-template-columns: 28px 1fr;
+  gap: 12px; align-items: flex-start;
+  padding: 6px 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.how-n {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 3px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.05em;
+  align-self: start;
+  margin-top: 1px;
+  text-align: center;
+}
+.ghost {
+  font: inherit; font-size: 13px;
+  padding: 8px 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ghost:hover { background: var(--bg-2); border-color: var(--ink-4); }
+.ghost.wide { width: 100%; text-align: center; padding: 12px; font-weight: 500; }
+
+/* LOADING */
+.loading-head .idle-h { margin-top: 6px; }
+.pipeline {
+  display: flex; align-items: center; gap: 4px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow-x: auto;
+  flex-wrap: wrap;
+}
+.pipe { display: flex; align-items: center; gap: 8px; padding: 4px 8px; flex-shrink: 0; }
+.pipe-bullet {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: "JetBrains Mono", monospace; font-size: 10.5px;
+  color: var(--ink-3);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  transition: all 0.2s;
+}
+.pipe-label { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
+.pipe-active .pipe-bullet {
+  background: var(--accent); color: white; border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.pipe-active .pipe-label { color: var(--ink); font-weight: 500; }
+.pipe-done .pipe-bullet {
+  background: var(--accent-soft); color: var(--accent); border-color: oklch(0.55 0.16 35 / 0.3);
+}
+.pipe-done .pipe-label { color: var(--ink-2); }
+.pipe-spin {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--accent-soft);
+  border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+  margin-left: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.thinking {
+  background: oklch(0.20 0.018 255);
+  border: 1px solid oklch(0.20 0.018 255);
+  border-radius: 14px;
+  overflow: hidden;
+  color: oklch(0.92 0.005 255);
+}
+.thinking-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 16px;
+  border-bottom: 1px solid oklch(0.30 0.02 255);
+  background: oklch(0.22 0.018 255);
+  font-size: 12.5px;
+  color: oklch(0.92 0.005 255);
+}
+.thinking-head svg { vertical-align: -2px; margin-right: 6px; color: oklch(0.78 0.13 60); }
+.thinking-meta {
+  font-family: "JetBrains Mono", monospace; font-size: 11px;
+  color: oklch(0.62 0.01 255); letter-spacing: 0.05em;
+}
+.thinking-body {
+  max-height: 220px; overflow-y: auto;
+  padding: 14px 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12.5px; line-height: 1.75;
+  color: oklch(0.82 0.008 255);
+}
+.th-line { opacity: 0; animation: fadeIn 0.35s ease forwards; }
+.th-line + .th-line { margin-top: 3px; }
+.th-arrow { color: oklch(0.78 0.13 60); margin-right: 6px; }
+.th-cursor {
+  display: inline-block;
+  color: oklch(0.78 0.13 60);
+  animation: blink 1s steps(1) infinite;
+}
+.thinking-body::-webkit-scrollbar { width: 6px; }
+.thinking-body::-webkit-scrollbar-thumb { background: oklch(0.35 0.02 255); border-radius: 3px; }
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes fadeIn { to { opacity: 1; } }
+
+/* RESULT */
+.result-top {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 28px; align-items: center;
+  padding: 24px 26px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+.pill {
+  display: inline-block;
+  font-size: 10.5px; letter-spacing: 0.12em; font-weight: 600;
+  padding: 4px 10px;
+  border: 1px solid; border-radius: 999px;
+}
+.result-title {
+  font-size: 22px; font-weight: 600; letter-spacing: -0.02em;
+  margin: 12px 0 10px; line-height: 1.25;
+  text-wrap: balance;
+  color: var(--ink);
+}
+.result-sum { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin: 0; max-width: 440px; }
+.result-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+.gauge-wrap { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
+.gauge-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.gauge-score {
+  font-size: 50px; font-weight: 300; letter-spacing: -0.04em;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.gauge-out { color: var(--ink-3); font-size: 11.5px; font-family: "JetBrains Mono", monospace; margin-top: 4px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+.card-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+.card-head h3 { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.badge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  padding: 3px 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  letter-spacing: 0.04em;
+}
+.flags { display: flex; flex-direction: column; gap: 10px; }
+.flag {
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid;
+  border-radius: 10px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.flag:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.flag-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 10px; margin-bottom: 8px;
+}
+.flag-titlerow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.flag-title { font-size: 14.5px; font-weight: 500; color: var(--ink); }
+.flag-sev {
+  font-size: 10.5px; letter-spacing: 0.10em; font-weight: 600;
+  padding: 2px 8px;
+  border: 1px solid; border-radius: 999px;
+  white-space: nowrap;
+}
+.flag-id {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--ink-4);
+  padding: 2px 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+  align-self: flex-start;
+}
+.flag-quote {
+  margin: 0 0 8px;
+  padding: 4px 0 4px 12px;
+  border-left: 2px solid var(--accent);
+  color: var(--ink-2);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.flag-desc { font-size: 13px; color: var(--ink-3); line-height: 1.55; }
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 160px 1fr 40px; align-items: center; gap: 12px; }
+.bar-label { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { height: 8px; background: var(--bg-2); border: 1px solid var(--line-soft); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; animation: barIn 0.7s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes barIn { from { width: 0 !important; } }
+.bar-val { font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 600; text-align: right; }
+.links { display: flex; flex-direction: column; gap: 10px; }
+.link-row {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.link-url {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12.5px;
+  color: var(--ink);
+  display: inline-flex; align-items: center; gap: 8px;
+  word-break: break-all;
+}
+.link-url svg { color: var(--ink-4); flex-shrink: 0; }
+.link-verdict {
+  font-size: 10.5px; letter-spacing: 0.10em;
+  padding: 3px 9px; border-radius: 999px; font-weight: 600;
+  align-self: start;
+}
+.v-bad  { color: var(--red);   background: oklch(0.55 0.20 25 / 0.10);  border: 1px solid oklch(0.55 0.20 25 / 0.30); }
+.v-warn { color: var(--amber); background: oklch(0.62 0.14 80 / 0.12);  border: 1px solid oklch(0.62 0.14 80 / 0.30); }
+.v-ok   { color: var(--sage);  background: oklch(0.48 0.11 155 / 0.10); border: 1px solid oklch(0.48 0.11 155 / 0.30); }
+.link-reason { grid-column: 1 / -1; font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+.actions { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.actions li {
+  display: grid; grid-template-columns: 36px 1fr;
+  gap: 12px; align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  transition: background 0.15s;
+}
+.actions li:hover { background: var(--bg-2); }
+.ax-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 3px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.05em;
+  align-self: start;
+  margin-top: 1px;
+  text-align: center;
+}
+.err-head {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: 16px; align-items: flex-start;
+  margin-bottom: 16px;
+}
+.err-icon {
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border-radius: 12px;
+  background: oklch(0.55 0.20 25 / 0.10);
+  color: var(--red);
+  border: 1px solid oklch(0.55 0.20 25 / 0.30);
+}
+.err-foot { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+/* RESPONSIVE */
+@media (max-width: 980px) {
+  .header { padding: 12px 18px; }
+  .nav a { display: none; }
+  .layout { grid-template-columns: 1fr; }
+  .pane-left { border-right: none; border-bottom: 1px solid var(--line); padding: 24px 18px; }
+  .pane-left .pane-inner { position: static; }
+  .pane-right { padding: 24px 18px 60px; }
+  .patterns { grid-template-columns: 1fr; }
+  .result-top { grid-template-columns: 1fr; }
+  .gauge-wrap { margin: 0; }
+  .bar-row { grid-template-columns: 110px 1fr 36px; gap: 8px; }
+  .composer-foot { flex-direction: column; align-items: stretch; }
+  .primary { justify-content: center; }
+}
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center">
-  <div x-data="{ status: 'idle' }" class="text-center">
-    <h1 class="text-3xl font-bold text-gray-800 mb-2">🛡️ Kalkan</h1>
-    <p class="text-gray-500">Pazaryeri Dolandırıcılık Tespiti</p>
-    <p class="mt-4 text-sm text-gray-400">Yapım aşamasında…</p>
-  </div>
+<body>
+<div id="root"></div>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ── Taxonomy ── */
+const TAX = {
+  ODEME_PLATFORM_DISI:            { severity:"kritik", label:"Platform dışı ödeme" },
+  ODEME_SAHTE_DEKONT:             { severity:"kritik", label:"Sahte dekont" },
+  LINK_SAHTE_KARGO:               { severity:"kritik", label:"Sahte kargo linki" },
+  LINK_KART_BILGISI:              { severity:"kritik", label:"Kart bilgisi linki" },
+  ODEME_KAPORA:                   { severity:"yuksek", label:"Kapora talebi" },
+  ODEME_KRIPTO:                   { severity:"yuksek", label:"Kripto ödeme" },
+  KARGO_UCRET_TUZAGI:             { severity:"yuksek", label:"Kargo ücret tuzağı" },
+  DAVRANIS_PLATFORM_DISINA_CIKMA: { severity:"yuksek", label:"Platform dışına çıkma" },
+  KIMLIK_IBAN_ISIM_UYUSMAZLIGI:   { severity:"yuksek", label:"IBAN isim uyuşmazlığı" },
+  ODEME_KOMISYON_SOYLEMI:         { severity:"orta",   label:"Komisyon kaçınması" },
+  FIYAT_COK_DUSUK:                { severity:"orta",   label:"Piyasanın altı fiyat" },
+  DAVRANIS_ACILIYET:              { severity:"orta",   label:"Aciliyet baskısı" },
+  DAVRANIS_TUTARSIZ_HIKAYE:       { severity:"orta",   label:"Tutarsız hikaye" },
+  HESAP_GECMISSIZ:                { severity:"orta",   label:"Geçmişsiz hesap" },
+  ILAN_BELIRSIZ:                  { severity:"dusuk",  label:"İlan belirsizliği" },
+  PLATFORM_ICI_GUVENCE:           { severity:"dusuk",  label:"Platform içi güvence" },
+  HESAP_KOKLU:                    { severity:"dusuk",  label:"Köklü hesap" },
+  WEB_SIKAYET_KAYDI:              { severity:"yuksek", label:"Web şikayet kaydı" },
+};
+const SEV = {
+  kritik: { label:"Kritik",  c:"oklch(0.55 0.20 25)",  soft:"oklch(0.55 0.20 25 / 0.10)",  border:"oklch(0.55 0.20 25 / 0.30)" },
+  yuksek: { label:"Yüksek",  c:"oklch(0.62 0.17 50)",  soft:"oklch(0.62 0.17 50 / 0.10)",  border:"oklch(0.62 0.17 50 / 0.30)" },
+  orta:   { label:"Orta",    c:"oklch(0.62 0.14 80)",  soft:"oklch(0.62 0.14 80 / 0.12)",  border:"oklch(0.62 0.14 80 / 0.30)" },
+  dusuk:  { label:"Düşük",   c:"oklch(0.48 0.11 155)", soft:"oklch(0.48 0.11 155 / 0.10)", border:"oklch(0.48 0.11 155 / 0.30)" },
+};
+const RISK = {
+  yuksek: { label:"YÜKSEK RİSK", c:"oklch(0.55 0.20 25)",  soft:"oklch(0.55 0.20 25 / 0.10)" },
+  orta:   { label:"ORTA RİSK",   c:"oklch(0.62 0.14 80)",  soft:"oklch(0.62 0.14 80 / 0.12)" },
+  dusuk:  { label:"DÜŞÜK RİSK",  c:"oklch(0.48 0.11 155)", soft:"oklch(0.48 0.11 155 / 0.10)" },
+};
+const riskTone = (level) => RISK[level] || RISK.orta;
+
+const SAMPLE = `Satıcı: Merhaba abi, WhatsApp'tan konuşalım 0532 ▮▮▮ ▮▮ ▮▮
+Alıcı: Buradan da yazabiliriz. Kargo nasıl olacak?
+Satıcı: Şu kargo linkinden ödemeyi yap: aras-kargo-odeme.online/tr/142
+Satıcı: IBAN: TR55 0006 4000 0011 ▮▮▮▮ ▮▮▮▮ 01 — Ad: Murat K.
+Alıcı: İlan sahibi Ayşe Y. değil miydi?
+Satıcı: Eşimin hesabı, fark etmez. Acele edelim başkası da istiyor.`;
+
+/* ══════════════════════════════════════════════
+   APP
+══════════════════════════════════════════════ */
+function App() {
+  const [screen, setScreen]               = useState('idle');
+  const [text, setText]                   = useState('');
+  const [images, setImages]               = useState([]);
+  const [deepCheck, setDeepCheck]         = useState(false);
+  const [showPrivacy, setShowPrivacy]     = useState(false);
+  const [result, setResult]               = useState(null);
+  const [errorMsg, setErrorMsg]           = useState('');
+  const [thinkingText, setThinkingText]   = useState('');
+  const [completedStages, setCompletedStages] = useState([]);
+  const [currentStage, setCurrentStage]   = useState('');
+  const fileRef = useRef(null);
+
+  const canAnalyze = text.trim().length > 0 || images.length > 0;
+
+  const addFiles = (files) => {
+    const allowed = ['image/jpeg','image/png','image/webp','image/gif'];
+    const next = Array.from(files)
+      .filter(f => allowed.includes(f.type) && f.size <= 10*1024*1024)
+      .slice(0, 4 - images.length)
+      .map(f => ({ name: f.name, url: URL.createObjectURL(f), file: f }));
+    setImages(prev => [...prev, ...next]);
+  };
+
+  const removeImage = (i) => {
+    setImages(prev => {
+      URL.revokeObjectURL(prev[i].url);
+      return prev.filter((_, j) => j !== i);
+    });
+  };
+
+  const reset = () => {
+    setImages(prev => { prev.forEach(im => URL.revokeObjectURL(im.url)); return []; });
+    setText('');
+    setScreen('idle');
+    setResult(null);
+    setErrorMsg('');
+    setThinkingText('');
+    setCompletedStages([]);
+    setCurrentStage('');
+  };
+
+  const onAnalyze = async () => {
+    if (!canAnalyze) return;
+    setScreen('loading');
+    setThinkingText('');
+    setCompletedStages([]);
+    setCurrentStage('');
+
+    const fd = new FormData();
+    images.forEach(im => fd.append('gorsel', im.file));
+    if (text.trim()) fd.append('metin', text);
+    fd.append('deep', deepCheck ? 'true' : 'false');
+
+    try {
+      const res = await fetch('/analyze/stream', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.detail || `Sunucu hatası (${res.status})`);
+        setScreen('error');
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let localCompleted = [];
+      let localCurrent = '';
+      let localThinking = '';
+      let gotResult = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
+        for (const part of parts) {
+          const dataLine = part.split('\n').find(l => l.startsWith('data: '));
+          if (!dataLine) continue;
+          let ev;
+          try { ev = JSON.parse(dataLine.slice(6)); } catch { continue; }
+
+          if (ev.type === 'stage') {
+            if (localCurrent) localCompleted = [...localCompleted, localCurrent];
+            localCurrent = ev.label;
+            setCompletedStages([...localCompleted]);
+            setCurrentStage(localCurrent);
+          } else if (ev.type === 'thinking') {
+            localThinking += ev.text;
+            setThinkingText(localThinking);
+          } else if (ev.type === 'result') {
+            gotResult = true;
+            setResult(ev.data);
+            setScreen('result');
+          } else if (ev.type === 'error') {
+            setErrorMsg(ev.message);
+            setScreen('error');
+            return;
+          }
+        }
+      }
+
+      if (!gotResult) {
+        setErrorMsg('Analiz tamamlanamadı — lütfen tekrar deneyin.');
+        setScreen('error');
+      }
+    } catch (err) {
+      setErrorMsg('Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.');
+      setScreen('error');
+    }
+  };
+
+  return (
+    <div className="root">
+      <Header onOpenPrivacy={() => setShowPrivacy(true)} />
+      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
+
+      <main className="layout">
+        {/* LEFT pane — composer (stays visible always) */}
+        <aside className="pane pane-left">
+          <div className="pane-inner">
+            <div className="intro">
+              <div className="eyebrow">Pazaryeri dolandırıcılık tespiti</div>
+              <h1 className="title">
+                Yazışmanı buraya bırak.<br/>
+                <span className="title-accent">Tuzak mı, değil mi — bir bakışta.</span>
+              </h1>
+              <p className="lede">
+                Sahte kargo linkleri, platform dışı ödeme, IBAN uyumsuzluğu ve
+                15+ örüntüyü saniyeler içinde tespit eder.
+              </p>
+            </div>
+
+            <div className={`composer ${screen !== 'idle' ? 'is-busy' : ''}`}>
+              <textarea
+                className="composer-text"
+                placeholder="Yazışma metnini yapıştır…"
+                value={text}
+                onChange={e => setText(e.target.value)}
+                disabled={screen !== 'idle'}
+              />
+
+              {images.length > 0 && (
+                <div className="thumbs">
+                  {images.map((im, i) => (
+                    <div className="thumb" key={i}>
+                      <img src={im.url} alt={im.name} />
+                      <button className="thumb-x" onClick={() => removeImage(i)} aria-label="Kaldır">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="composer-foot">
+                <div className="composer-left">
+                  <button className="chip"
+                          onClick={() => fileRef.current?.click()}
+                          disabled={screen !== 'idle' || images.length >= 4}>
+                    <IconImage /> Ekran görüntüsü
+                    {images.length > 0 && <span className="chip-count">{images.length}</span>}
+                  </button>
+                  <input ref={fileRef} type="file" accept="image/*" multiple
+                         style={{display:'none'}}
+                         onChange={e => { addFiles(e.target.files); e.target.value = ''; }} />
+                  {!text && images.length === 0 && (
+                    <button className="link-btn" onClick={() => setText(SAMPLE)}>Örneği dene</button>
+                  )}
+                </div>
+                <button className="primary" onClick={onAnalyze}
+                        disabled={!canAnalyze || screen === 'loading'}>
+                  {screen === 'loading' ? 'Analiz ediliyor…' : 'Analiz et'}
+                  {screen !== 'loading' && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 5l7 7-7 7"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              <div className="composer-meta">
+                <label className={`switch ${deepCheck ? 'on' : ''}`}>
+                  <input type="checkbox" checked={deepCheck}
+                         onChange={e => setDeepCheck(e.target.checked)} />
+                  <span className="switch-track"><span className="switch-thumb" /></span>
+                  <span className="switch-text">
+                    <IconSearch /> Derin web kontrolü
+                    <span className="muted">Google Search ile şikayet, IBAN ve domain doğrulama</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="trust-row">
+              <span className="trust-item"><IconLock /> Tarayıcında çalışır, hiçbir veri saklanmaz.</span>
+              <button className="trust-link" onClick={() => setShowPrivacy(true)}>Haklarınız →</button>
+            </div>
+          </div>
+        </aside>
+
+        {/* RIGHT pane — state-driven content */}
+        <section className="pane pane-right">
+          <div className="pane-inner">
+            {screen === 'idle'    && <IdlePanel onTryExample={() => setText(SAMPLE)} />}
+            {screen === 'loading' && (
+              <Loading
+                thinkingText={thinkingText}
+                completedStages={completedStages}
+                currentStage={currentStage}
+              />
+            )}
+            {screen === 'result'  && result && <Result data={result} onReset={reset} />}
+            {screen === 'error'   && <ErrorState message={errorMsg} onReset={reset} />}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════ */
+function Header({ onOpenPrivacy }) {
+  return (
+    <header className="header">
+      <div className="brand">
+        <Mark />
+        <span className="brand-word">kalkan</span>
+      </div>
+      <nav className="nav">
+        <a href="#how">Nasıl çalışır</a>
+        <button className="nav-link" onClick={onOpenPrivacy}>
+          <IconShield2 /> Haklarınız &amp; gizlilik
+        </button>
+      </nav>
+    </header>
+  );
+}
+
+function Mark() {
+  return (
+    <svg width="24" height="28" viewBox="0 0 24 28" fill="none" aria-hidden="true" className="brand-mark">
+      <path d="M12 1 L23 4.5 V14 C23 20.5 18.5 25 12 27 C5.5 25 1 20.5 1 14 V4.5 Z"
+            fill="currentColor" />
+      <path d="M8.5 8 V20" stroke="var(--bg)" strokeWidth="2.4" strokeLinecap="square" fill="none" />
+      <path d="M8.5 14 L15 8 M8.5 14 L15 20" stroke="var(--bg)" strokeWidth="2.4" strokeLinecap="square" fill="none" />
+    </svg>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   PRIVACY MODAL
+══════════════════════════════════════════════ */
+function PrivacyModal({ onClose }) {
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <div className="modal-icon"><IconShield2 /></div>
+          <div>
+            <div className="eyebrow">KVKK · Gizlilik</div>
+            <h2 className="modal-title">Verileriniz size ait, hep öyle kalacak.</h2>
+          </div>
+          <button className="modal-x" onClick={onClose} aria-label="Kapat">×</button>
+        </div>
+        <ul className="modal-list">
+          <li>
+            <strong>Hiçbir yazışma saklanmaz.</strong>
+            <span>Yapıştırdığınız metin ya da yüklediğiniz ekran görüntüsü; analiz tamamlandığı an hafızadan silinir. Sunucumuzda kayıt tutulmaz.</span>
+          </li>
+          <li>
+            <strong>Hesap, e-posta, çerez yok.</strong>
+            <span>Kalkan'ı kullanmak için kayıt olmanıza gerek yok. Reklam çerezi, izleme pikseli ya da analitik kullanmıyoruz.</span>
+          </li>
+          <li>
+            <strong>Analiz tarayıcınızda başlar.</strong>
+            <span>Görsel ön işleme ve metin temizliği cihazınızda yapılır. Yalnızca temizlenmiş metin, yapay zeka analizi için anlık olarak gönderilir; sonuç döndüğünde bağlantı kapanır.</span>
+          </li>
+          <li>
+            <strong>Üçüncü tarafa veri aktarımı yok.</strong>
+            <span>Yazışmalarınız reklam, eğitim verisi ya da herhangi başka bir amaç için kullanılmaz. Pazarlanmaz, satılmaz, paylaşılmaz.</span>
+          </li>
+          <li>
+            <strong>KVKK kapsamında haklarınız.</strong>
+            <span>6698 sayılı Kişisel Verilerin Korunması Kanunu uyarınca silme, düzeltme ya da bilgi talep etme hakkınız vardır — ancak Kalkan zaten hiçbir kişisel veri tutmadığı için talep etmenize gerek yoktur.</span>
+          </li>
+        </ul>
+        <div className="modal-foot">
+          <span className="modal-foot-meta">Son güncelleme · Mayıs 2026</span>
+          <button className="primary" onClick={onClose}>Anladım</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   IDLE PANEL
+══════════════════════════════════════════════ */
+function IdlePanel({ onTryExample }) {
+  const patterns = [
+    { id:"LINK_SAHTE_KARGO",              title:"Sahte kargo bağlantıları",    desc:"araskargo.com.tr taklitleri, .online ve .info uzantıları" },
+    { id:"ODEME_PLATFORM_DISI",           title:"Platform dışı ödeme talebi", desc:"WhatsApp / EFT / kapora yönlendirmeleri" },
+    { id:"KIMLIK_IBAN_ISIM_UYUSMAZLIGI",  title:"IBAN uyumsuzluğu",           desc:"İlan sahibi adı ≠ banka hesap sahibi" },
+    { id:"DAVRANIS_ACILIYET",             title:"Aciliyet baskısı",            desc:"\"Başkası da istiyor\", \"hemen kapatıyorum\" kalıpları" },
+    { id:"WEB_SIKAYET_KAYDI",             title:"Web şikayet kaydı",           desc:"Şikayetvar, Ekşi Sözlük ve forum izleri" },
+    { id:"FIYAT_COK_DUSUK",              title:"Piyasa altı fiyat",           desc:"Tipik aralığın çok altındaki ilanlar" },
+  ];
+  return (
+    <div className="idle">
+      <div className="idle-head" id="how">
+        <div className="eyebrow ink">Kalkan ne tespit eder?</div>
+        <h2 className="idle-h">Pazaryeri yazışmalarında 18+ dolandırıcılık sinyali.</h2>
+      </div>
+      <div className="patterns">
+        {patterns.map(p => (
+          <div className="pattern" key={p.id}>
+            <span className="pattern-id">{p.id}</span>
+            <div className="pattern-body">
+              <div className="pattern-t">{p.title}</div>
+              <div className="pattern-d">{p.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="how">
+        <div className="how-row"><span className="how-n">01</span><span>Yazışmayı yapıştır veya ekran görüntüsünü yükle.</span></div>
+        <div className="how-row"><span className="how-n">02</span><span>Gemini 5 aşamalı boru hattından geçirir, düşüncelerini canlı gösterir.</span></div>
+        <div className="how-row"><span className="how-n">03</span><span>0–100 risk skoru, gerekçeli bayraklar ve aksiyon listesi al.</span></div>
+      </div>
+      <button className="ghost wide" onClick={onTryExample}>Örnek yazışmayı dene →</button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   LOADING
+══════════════════════════════════════════════ */
+function Loading({ thinkingText, completedStages, currentStage }) {
+  const bodyRef = useRef(null);
+  const allStages = [...completedStages, ...(currentStage ? [currentStage] : [])];
+  const lines = thinkingText.split('\n').filter(Boolean);
+
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+  }, [lines.length]);
+
+  return (
+    <section className="loading">
+      <div className="loading-head">
+        <div className="eyebrow ink"><span className="dot pulse" /> Analiz ediliyor</div>
+        <h2 className="idle-h">Yazışma 5 aşamadan geçiyor.</h2>
+      </div>
+
+      {allStages.length > 0 && (
+        <div className="pipeline">
+          {allStages.map((s, i) => {
+            const isActive = i === allStages.length - 1;
+            return (
+              <div className={`pipe pipe-${isActive ? 'active' : 'done'}`} key={i}>
+                <div className="pipe-bullet">{isActive ? i + 1 : <IconCheck />}</div>
+                <div className="pipe-label">{s}</div>
+                {isActive && <div className="pipe-spin" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {thinkingText && (
+        <div className="thinking">
+          <div className="thinking-head">
+            <span><IconSpark /> Düşünme süreci</span>
+            <span className="thinking-meta">canlı akış · gemini</span>
+          </div>
+          <div className="thinking-body" ref={bodyRef}>
+            {lines.map((l, i) => (
+              <div className="th-line" key={i}>
+                <span className="th-arrow">›</span> {l}
+              </div>
+            ))}
+            <span className="th-cursor">▍</span>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   RESULT
+══════════════════════════════════════════════ */
+function Result({ data, onReset }) {
+  const tone = riskTone(data.risk_level);
+  const hasFlags = data.flags && data.flags.length > 0;
+  const hasContribs = data.signal_contributions && Object.keys(data.signal_contributions).length > 0;
+  const hasLinks = data.link_analysis && data.link_analysis.length > 0;
+  const hasActions = data.recommended_actions && data.recommended_actions.length > 0;
+
+  return (
+    <section className="result">
+      <div className="result-top" style={{borderTopColor: tone.c}}>
+        <div className="result-meta">
+          <span className="pill" style={{background: tone.soft, color: tone.c, borderColor: tone.c + '40'}}>{tone.label}</span>
+          <h2 className="result-title">{hasFlags ? 'Dolandırıcılık sinyali tespit edildi' : 'Analiz tamamlandı'}</h2>
+          <p className="result-sum">{data.verdict}</p>
+          <div className="result-actions">
+            <button className="ghost" onClick={onReset}>Yeni analiz</button>
+          </div>
+        </div>
+        <Gauge score={data.risk_score} tone={tone} />
+      </div>
+
+      {hasFlags && (
+        <div className="card">
+          <div className="card-head">
+            <h3>Tespit edilen sinyaller</h3>
+            <span className="badge">{data.flags.length} bayrak</span>
+          </div>
+          <div className="flags">
+            {data.flags.map((f, i) => <FlagCard key={i} flag={f} />)}
+          </div>
+        </div>
+      )}
+
+      {hasContribs && (
+        <div className="card">
+          <div className="card-head"><h3>Sinyal katkıları</h3></div>
+          <Bars contributions={data.signal_contributions} />
+        </div>
+      )}
+
+      {hasLinks && (
+        <div className="card">
+          <div className="card-head">
+            <h3>Link analizi</h3>
+            <span className="badge">{data.link_analysis.length} bağlantı</span>
+          </div>
+          <div className="links">
+            {data.link_analysis.map((l, i) => <LinkRow key={i} link={l} />)}
+          </div>
+        </div>
+      )}
+
+      {hasActions && (
+        <div className="card">
+          <div className="card-head"><h3>Önerilen aksiyonlar</h3></div>
+          <ol className="actions">
+            {data.recommended_actions.map((a, i) => (
+              <li key={i}>
+                <span className="ax-num">{String(i+1).padStart(2,'0')}</span>
+                <span>{a}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FlagCard({ flag }) {
+  const meta = TAX[flag.id] || { severity:'orta', label: flag.id };
+  const sev = SEV[meta.severity] || SEV.orta;
+  return (
+    <div className="flag" style={{borderLeftColor: sev.c}}>
+      <div className="flag-top">
+        <div className="flag-titlerow">
+          <span className="flag-title">{meta.label}</span>
+          <span className="flag-sev" style={{color: sev.c, background: sev.soft, borderColor: sev.border}}>{sev.label}</span>
+        </div>
+        <span className="flag-id">{flag.id}</span>
+      </div>
+      {flag.evidence && <blockquote className="flag-quote">"{flag.evidence}"</blockquote>}
+      {flag.description && <div className="flag-desc">{flag.description}</div>}
+    </div>
+  );
+}
+
+function Bars({ contributions }) {
+  const entries = Object.entries(contributions).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+  const max = Math.max(...entries.map(([_,v]) => Math.abs(v)), 1);
+  return (
+    <div className="bars">
+      {entries.map(([k, v]) => {
+        const pct = Math.abs(v) / max * 100;
+        const isGood = v < 0;
+        const meta = TAX[k] || {};
+        const sev = isGood ? SEV.dusuk : (SEV[meta.severity] || SEV.orta);
+        return (
+          <div className="bar-row" key={k}>
+            <div className="bar-label" title={k}>{meta.label || k}</div>
+            <div className="bar-track">
+              <div className="bar-fill" style={{width: `${pct}%`, background: sev.c}} />
+            </div>
+            <div className="bar-val" style={{color: sev.c}}>{v > 0 ? '+' : ''}{typeof v === 'number' ? v.toFixed(1) : v}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LinkRow({ link }) {
+  const verdict = link.status === 'sahte'   ? { label:'Sahte',   cls:'v-bad' }
+                : link.status === 'guvenli' ? { label:'Güvenli', cls:'v-ok' }
+                :                             { label:'Şüpheli', cls:'v-warn' };
+  return (
+    <div className="link-row">
+      <div className="link-url"><IconLink /> <span>{link.url}</span></div>
+      <div className={`link-verdict ${verdict.cls}`}>{verdict.label}</div>
+      <div className="link-reason">{link.reason}</div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   GAUGE
+══════════════════════════════════════════════ */
+function Gauge({ score, tone }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    let raf;
+    const start = performance.now();
+    const tick = (now) => {
+      const k = Math.min(1, (now - start) / 900);
+      const e = 1 - Math.pow(1 - k, 3);
+      setShown(Math.round(score * e));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [score]);
+
+  const r = 70, circ = 2 * Math.PI * r;
+  const dash = circ * (shown / 100);
+  return (
+    <div className="gauge-wrap">
+      <svg viewBox="0 0 180 180" width="180" height="180">
+        <circle cx="90" cy="90" r={r} stroke="var(--line)" strokeWidth="10" fill="none" />
+        <circle cx="90" cy="90" r={r} stroke={tone.c} strokeWidth="10" fill="none"
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${circ - dash}`}
+                transform="rotate(-90 90 90)" />
+      </svg>
+      <div className="gauge-center">
+        <div className="gauge-score" style={{color: tone.c}}>{shown}</div>
+        <div className="gauge-out">/ 100</div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   ERROR STATE
+══════════════════════════════════════════════ */
+function ErrorState({ message, onReset }) {
+  return (
+    <section className="error-state">
+      <div className="card">
+        <div className="err-head">
+          <div className="err-icon"><IconAlert /></div>
+          <div>
+            <h2 className="result-title" style={{margin:0}}>Analiz tamamlanamadı</h2>
+            <p className="result-sum">{message || 'Beklenmeyen bir hata oluştu.'} Bu arada şu manuel kontrolleri yapabilirsiniz:</p>
+          </div>
+        </div>
+        <ol className="actions">
+          {[
+            'Karşı tarafın platform hesabını ve üyelik geçmişini inceleyin.',
+            'Platform dışı ödeme veya kargo bağlantısı istenmişse işlemi durdurun.',
+            'IBAN bilgisini banka ile doğrulayın; hesap sahibi adı ilan sahibiyle aynı olmalı.',
+            'Şüphede kalırsanız şikayetvar.com veya pazaryeri destek hattını arayın.',
+          ].map((a, i) => (
+            <li key={i}><span className="ax-num">{String(i+1).padStart(2,'0')}</span><span>{a}</span></li>
+          ))}
+        </ol>
+        <div className="err-foot">
+          <button className="ghost" onClick={onReset}>Yeni analiz</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   ICONS
+══════════════════════════════════════════════ */
+const S = { stroke:"currentColor", strokeWidth:1.7, fill:"none", strokeLinecap:"round", strokeLinejoin:"round" };
+const IconImage   = () => <svg width="14" height="14" viewBox="0 0 24 24" {...S}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 9"/></svg>;
+const IconLock    = () => <svg width="12" height="12" viewBox="0 0 24 24" {...S}><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>;
+const IconCheck   = () => <svg width="13" height="13" viewBox="0 0 24 24" {...S}><path d="M5 12l4 4 10-10"/></svg>;
+const IconSpark   = () => <svg width="13" height="13" viewBox="0 0 24 24" {...S}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></svg>;
+const IconLink    = () => <svg width="13" height="13" viewBox="0 0 24 24" {...S}><path d="M10 14a4 4 0 005.66 0l3-3a4 4 0 10-5.66-5.66L11 7"/><path d="M14 10a4 4 0 00-5.66 0l-3 3a4 4 0 105.66 5.66L13 17"/></svg>;
+const IconSearch  = () => <svg width="13" height="13" viewBox="0 0 24 24" {...S}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>;
+const IconAlert   = () => <svg width="22" height="22" viewBox="0 0 24 24" {...S}><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.86 1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.41 0z"/></svg>;
+const IconShield2 = () => <svg width="13" height="13" viewBox="0 0 24 24" {...S}><path d="M12 2L4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5z"/></svg>;
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
 </body>
 </html>

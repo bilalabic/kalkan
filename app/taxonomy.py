@@ -2,38 +2,32 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class BayrakTanim:
+class FlagDef:
     id: str
-    kategori: str
-    severity: str          # "kritik" | "yuksek" | "orta" | "dusuk"
-    log_odds_weight: float  # pozitif = suç yönünde, negatif = aklayıcı
+    category: str
+    severity: str
+    log_odds_weight: float
 
 
-# Tek düzenleme noktası — tüm bayraklar burada.
-BAYRAKLAR: dict[str, BayrakTanim] = {b.id: b for b in [
-    # ── Kritik ──────────────────────────────────────────────────────────
-    BayrakTanim("ODEME_PLATFORM_DISI",        "odeme",    "kritik",  3.2),
-    BayrakTanim("ODEME_SAHTE_DEKONT",         "odeme",    "kritik",  3.5),
-    BayrakTanim("LINK_SAHTE_KARGO",           "link",     "kritik",  3.7),
-    BayrakTanim("LINK_KART_BILGISI",          "link",     "kritik",  3.6),
-    # ── Yüksek ──────────────────────────────────────────────────────────
-    BayrakTanim("ODEME_KAPORA",               "odeme",    "yuksek",  1.8),
-    BayrakTanim("ODEME_KRIPTO",               "odeme",    "yuksek",  1.9),
-    BayrakTanim("KARGO_UCRET_TUZAGI",         "kargo",    "yuksek",  3.4),
-    BayrakTanim("DAVRANIS_PLATFORM_DISINA_CIKMA", "davranis", "yuksek", 1.7),
-    BayrakTanim("KIMLIK_IBAN_ISIM_UYUSMAZLIGI", "kimlik", "yuksek",  2.0),
-    # ── Orta ────────────────────────────────────────────────────────────
-    BayrakTanim("ODEME_KOMISYON_SOYLEMI",     "odeme",    "orta",    1.2),
-    BayrakTanim("FIYAT_COK_DUSUK",            "fiyat",    "orta",    1.6),
-    BayrakTanim("DAVRANIS_ACILIYET",          "davranis", "orta",    1.1),
-    BayrakTanim("DAVRANIS_TUTARSIZ_HIKAYE",   "davranis", "orta",    1.0),
-    BayrakTanim("HESAP_GECMISSIZ",            "hesap",    "orta",    1.4),
-    # ── Düşük ───────────────────────────────────────────────────────────
-    BayrakTanim("ILAN_BELIRSIZ",              "ilan",     "dusuk",   0.5),
-    # ── Aklayıcı sinyaller (negatif ağırlık) ────────────────────────────
-    BayrakTanim("PLATFORM_ICI_GUVENCE",       "platform", "dusuk",  -1.2),
-    BayrakTanim("HESAP_KOKLU",                "hesap",    "dusuk",  -0.9),
+FLAGS: dict[str, FlagDef] = {f.id: f for f in [
+    FlagDef("ODEME_PLATFORM_DISI",           "payment",   "kritik",  3.2),
+    FlagDef("ODEME_SAHTE_DEKONT",            "payment",   "kritik",  3.5),
+    FlagDef("LINK_SAHTE_KARGO",              "link",      "kritik",  3.7),
+    FlagDef("LINK_KART_BILGISI",             "link",      "kritik",  3.6),
+    FlagDef("ODEME_KAPORA",                  "payment",   "yuksek",  1.8),
+    FlagDef("ODEME_KRIPTO",                  "payment",   "yuksek",  1.9),
+    FlagDef("KARGO_UCRET_TUZAGI",            "cargo",     "yuksek",  3.4),
+    FlagDef("DAVRANIS_PLATFORM_DISINA_CIKMA","behaviour", "yuksek",  1.7),
+    FlagDef("KIMLIK_IBAN_ISIM_UYUSMAZLIGI",  "identity",  "yuksek",  2.0),
+    FlagDef("ODEME_KOMISYON_SOYLEMI",        "payment",   "orta",    1.2),
+    FlagDef("FIYAT_COK_DUSUK",              "price",     "orta",    1.6),
+    FlagDef("DAVRANIS_ACILIYET",             "behaviour", "orta",    1.1),
+    FlagDef("DAVRANIS_TUTARSIZ_HIKAYE",      "behaviour", "orta",    1.0),
+    FlagDef("HESAP_GECMISSIZ",              "account",   "orta",    1.4),
+    FlagDef("ILAN_BELIRSIZ",                "listing",   "dusuk",   0.5),
+    FlagDef("WEB_SIKAYET_KAYDI",            "web",       "yuksek",  2.5),
+    FlagDef("PLATFORM_ICI_GUVENCE",         "platform",  "dusuk",  -1.2),
+    FlagDef("HESAP_KOKLU",                  "account",   "dusuk",  -0.9),
 ]}
 
-# Hızlı erişim yardımcıları
-GECERLI_IDS: frozenset[str] = frozenset(BAYRAKLAR)
+VALID_IDS: frozenset[str] = frozenset(FLAGS)
