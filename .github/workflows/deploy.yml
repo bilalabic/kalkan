@@ -1,0 +1,51 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: |
+          python -m py_compile \
+            app/main.py \
+            app/config.py \
+            app/schemas.py \
+            app/taxonomy.py \
+            app/pipeline/classify.py \
+            app/pipeline/deterministic.py \
+            app/pipeline/extract.py \
+            app/pipeline/fusion.py \
+            app/pipeline/verify.py \
+            app/tools/domain_check.py \
+            app/tools/iban_check.py
+          echo "Syntax OK"
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

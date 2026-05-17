@@ -1,3 +1,5 @@
+import sys
+
 from pydantic_settings import BaseSettings
 
 
@@ -11,4 +13,9 @@ class Settings(BaseSettings):
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
-settings = Settings()
+try:
+    settings = Settings()
+except Exception as exc:
+    print(f"[FATAL] Yapılandırma hatası: {exc}", file=sys.stderr)
+    print("[FATAL] GEMINI_API_KEY environment variable'ı set edilmemiş.", file=sys.stderr)
+    sys.exit(1)
