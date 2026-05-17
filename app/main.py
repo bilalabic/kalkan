@@ -2,22 +2,82 @@ from __future__ import annotations
 
 import json as _json
 import logging
+import time
+import uuid
+from collections import defaultdict
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.config import settings
 from app.pipeline.classify import classify, classify_stream
 from app.pipeline.deterministic import run_deterministic
 from app.pipeline.extract import extract_multi
 from app.pipeline.fusion import fuse
 from app.pipeline.verify import verify
 from app.schemas import AnalysisResult
+from app.taxonomy import FLAGS
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] req=%(request_id)s %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+
+class _RequestIDFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "request_id"):
+            record.request_id = "-"
+        return True
+
+for handler in logging.root.handlers:
+    handler.addFilter(_RequestIDFilter())
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Kalkan", version="0.1.0", docs_url="/api/docs")
+
+# ── Request-ID + timing middleware ──────────────────────────────────────────
+
+class _RequestIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        rid = uuid.uuid4().hex[:8]
+        request.state.request_id = rid
+        t0 = time.monotonic()
+        response = await call_next(request)
+        ms = (time.monotonic() - t0) * 1000
+        response.headers["X-Request-ID"] = rid
+        logger.info(
+            "method=%s path=%s status=%d ms=%.0f",
+            request.method, request.url.path, response.status_code, ms,
+            extra={"request_id": rid},
+        )
+        return response
+
+app.add_middleware(_RequestIDMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
+# ── Simple in-memory rate limiter (10 req / 60 s per IP) ────────────────────
+
+_rl_store: dict[str, list[float]] = defaultdict(list)
+
+def _rate_limit(ip: str) -> bool:
+    now = time.monotonic()
+    bucket = _rl_store[ip]
+    bucket[:] = [t for t in bucket if t > now - settings.rate_limit_window]
+    if len(bucket) >= settings.rate_limit_max:
+        return False
+    bucket.append(now)
+    return True
 
 
 def _api_error_message(exc: Exception) -> str:
@@ -47,6 +107,21 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/api/flags")
+def get_flags():
+    """Return the full flag taxonomy so the frontend doesn't need a hardcoded copy."""
+    return [
+        {
+            "id": fid,
+            "category": f.category,
+            "severity": f.severity,
+            "weight": f.log_odds_weight,
+            "label": f.label,
+        }
+        for fid, f in FLAGS.items()
+    ]
+
+
 async def _read_images(files: list[UploadFile]) -> list[tuple[bytes, str]]:
     """Validate and read up to _MAX_FILES images; return (bytes, mime_type) tuples."""
     if len(files) > _MAX_FILES:
@@ -71,10 +146,13 @@ async def _read_images(files: list[UploadFile]) -> list[tuple[bytes, str]]:
 
 @app.post("/analyze", response_model=AnalysisResult)
 async def analyze(
+    request: Request,
     gorsel: Annotated[list[UploadFile], File(description="Ekran görüntüsü (maks 4)")] = [],
     metin: Annotated[str | None, Form(description="Yazışma metni")] = None,
     deep: Annotated[bool, Form(description="Derin web kontrolü")] = False,
 ) -> AnalysisResult:
+    if not _rate_limit(request.client.host if request.client else "unknown"):
+        raise HTTPException(status_code=429, detail="Çok fazla istek — lütfen bir dakika bekleyin.")
     if not gorsel and (not metin or not metin.strip()):
         raise HTTPException(
             status_code=422,
@@ -98,7 +176,7 @@ async def analyze(
     try:
         classify_output = await classify(extracted, deep=deep)
     except Exception as exc:
-        logger.error("classify stage failed: %s", exc)
+        logger.error("classify stage failed [%s]: %s", type(exc).__name__, exc, exc_info=True)
         return _safe_response()
 
     try:
@@ -124,11 +202,14 @@ async def analyze(
 
 @app.post("/analyze/stream")
 async def analyze_stream(
+    request: Request,
     gorsel: Annotated[list[UploadFile], File(description="Ekran görüntüsü (maks 4)")] = [],
     metin: Annotated[str | None, Form(description="Yazışma metni")] = None,
     deep: Annotated[bool, Form(description="Derin web kontrolü")] = False,
 ):
     """SSE endpoint — streams thinking tokens and stage events, then the final result."""
+    if not _rate_limit(request.client.host if request.client else "unknown"):
+        raise HTTPException(status_code=429, detail="Çok fazla istek — lütfen bir dakika bekleyin.")
     if not gorsel and (not metin or not metin.strip()):
         raise HTTPException(
             status_code=422,
@@ -191,7 +272,7 @@ async def analyze_stream(
                 recommended_actions=verified.recommended_actions,
             )
         except Exception as exc:
-            logger.error("stream fusion failed: %s", exc)
+            logger.error("stream fusion failed [%s]: %s", type(exc).__name__, exc, exc_info=True)
             analysis_result = _safe_response()
 
         yield sse({"type": "result", "data": analysis_result.model_dump()})

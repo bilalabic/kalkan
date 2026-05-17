@@ -9,7 +9,7 @@ from app.schemas import ClassifyOutput, ExtractOutput, Flag
 logger = logging.getLogger(__name__)
 
 # Minimum fuzzy-match score (0–100) to keep a flag's evidence.
-_MIN_SCORE = 70
+_MIN_SCORE = 60
 
 
 def _match_score(evidence: str, corpus: str) -> float:
@@ -20,7 +20,8 @@ def _match_score(evidence: str, corpus: str) -> float:
 
 def verify(classify_output: ClassifyOutput, extracted: ExtractOutput) -> ClassifyOutput:
     """Stage 4: drop flags whose evidence string cannot be found in the original text."""
-    corpus = " ".join(extracted.turns)
+    # Use newline separator so turn-boundary spans don't merge into one word.
+    corpus = "\n".join(extracted.turns)
     if extracted.urls:
         corpus += " " + " ".join(extracted.urls)
     if extracted.ibans:

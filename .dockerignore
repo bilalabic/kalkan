@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.git/
+data/eval_set.jsonl
+*.log
+README.md
+Makefile

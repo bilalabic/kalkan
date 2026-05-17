@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import pathlib
 
 from google import genai
@@ -8,6 +9,8 @@ from google.genai import types
 
 from app.config import settings
 from app.schemas import ExtractOutput
+
+logger = logging.getLogger(__name__)
 
 _PROMPT = (pathlib.Path(__file__).parent.parent / "prompts" / "extract.txt").read_text(encoding="utf-8")
 
@@ -82,6 +85,10 @@ async def extract_multi(
     ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
     valid = [r for r in results if isinstance(r, ExtractOutput)]
+    failed = [(i, r) for i, r in enumerate(results) if isinstance(r, Exception)]
+    if failed:
+        details = ", ".join(f"görsel {i+1}: {type(e).__name__}" for i, e in failed)
+        logger.warning("extract_multi: %d/%d görsel başarısız — %s", len(failed), len(results), details)
     if not valid:
-        raise RuntimeError("Tüm görsel çıkarma işlemleri başarısız oldu.")
+        raise RuntimeError(f"Tüm görseller işlenemedi ({len(results)}/{len(results)} başarısız).")
     return _merge_extracts(valid)

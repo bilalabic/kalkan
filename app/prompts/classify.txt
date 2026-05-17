@@ -218,6 +218,117 @@ Satıcı: Tabii, bekliyorum.
 }
 ### ÖRNEK 6 — BİTİŞ
 
+### ÖRNEK 7 — BAŞLANGIÇ
+Yazışma:
+Alıcı: Sahibinden'de gördüm, TV hâlâ satılık mı?
+Satıcı: Evet, 12.000 TL. Ödemeyi IBAN'a yapabilirsiniz.
+Alıcı: IBAN verir misiniz?
+Satıcı: TR44 0006 2000 1040 0006 2994 13 — Mehmet Yılmaz.
+Alıcı: Ama ilanınızda isminiz Ayşe Demir yazıyor?
+Satıcı: Eşimin hesabı, fark etmez. Hızlı ödeme yaparsanız bugün kargoluyorum.
+
+IBANs: TR44 0006 2000 1040 0006 2994 13
+
+# Düşünce: İlan sahibi adı ile IBAN hesap sahibi adı uyuşmuyor — kimlik-hesap uyuşmazlığı + aciliyet baskısı.
+{
+  "verdict": "İlan sahibi ile IBAN hesap sahibinin adları uyuşmuyor; platform dışı ödeme ve aciliyet baskısı ekleniyor — yüksek riskli.",
+  "flags": [
+    {
+      "id": "KIMLIK_IBAN_ISIM_UYUSMAZLIGI",
+      "category": "identity",
+      "evidence": "ilanınızda isminiz Ayşe Demir yazıyor",
+      "description": "İlan sahibi adı (Ayşe Demir) IBAN hesap sahibi adından (Mehmet Yılmaz) farklı."
+    },
+    {
+      "id": "ODEME_PLATFORM_DISI",
+      "category": "payment",
+      "evidence": "Ödemeyi IBAN'a yapabilirsiniz.",
+      "description": "Platform güvencesi devre dışı bırakılarak doğrudan IBAN'a ödeme talep ediliyor."
+    },
+    {
+      "id": "DAVRANIS_ACILIYET",
+      "category": "behaviour",
+      "evidence": "Hızlı ödeme yaparsanız bugün kargoluyorum.",
+      "description": "Hız baskısıyla acele karar aldırılmaya çalışılıyor."
+    }
+  ],
+  "recommended_actions": [
+    "IBAN sahibi adının ilan sahibiyle aynı olduğunu doğrulayın.",
+    "Platform dışı ödeme yapmayın.",
+    "Şüpheli durumu platforma bildirin."
+  ]
+}
+### ÖRNEK 7 — BİTİŞ
+
+### ÖRNEK 8 — BAŞLANGIÇ
+Yazışma:
+Satıcı: Merhaba, bu hesabımı yeni açtım ama ürünler gerçek, merak etmeyin.
+Alıcı: Kaç satışınız var?
+Satıcı: Bu hesap yeni ama başka hesabımla yüzlerce satış yaptım, o hesap kapatıldı.
+Alıcı: Peki platform güvenceli ödeme yapabilir miyim?
+Satıcı: Hayır, platform komisyon alıyor. Bana direkt yatırın, bugün gönderirim.
+Alıcı: Acele var mı?
+Satıcı: Evet, stok bitmek üzere. Hemen karar verin.
+
+# Düşünce: Geçmişsiz hesap (eski hesap kapatılmış), platform dışı ödeme, aciliyet baskısı — üç orta/yüksek bayrak birlikte.
+{
+  "verdict": "Geçmişsiz hesap, platform güvencesi reddi ve aciliyet baskısı bir arada — yüksek riskli örüntü.",
+  "flags": [
+    {
+      "id": "HESAP_GECMISSIZ",
+      "category": "account",
+      "evidence": "bu hesabımı yeni açtım",
+      "description": "Hesap yeni açılmış, satış geçmişi yok; önceki hesabın kapatıldığı belirtiliyor."
+    },
+    {
+      "id": "ODEME_PLATFORM_DISI",
+      "category": "payment",
+      "evidence": "platform komisyon alıyor. Bana direkt yatırın",
+      "description": "Platform güvencesi reddedilerek doğrudan ödeme talep ediliyor."
+    },
+    {
+      "id": "DAVRANIS_ACILIYET",
+      "category": "behaviour",
+      "evidence": "stok bitmek üzere. Hemen karar verin.",
+      "description": "Yapay stok baskısıyla aceleci karar aldırılmaya çalışılıyor."
+    }
+  ],
+  "recommended_actions": [
+    "Yeni açılmış hesaplardan platform dışı ödeme yapmayın.",
+    "Satıcının geçmişini ve değerlendirmelerini inceleyin.",
+    "Yalnızca platform güvenceli ödeme yöntemini kullanın."
+  ]
+}
+### ÖRNEK 8 — BİTİŞ
+
+### ÖRNEK 9 — BAŞLANGIÇ
+Yazışma:
+Satıcı: Kimliğinizi ve selfie'nizi gönderin, güvenlik doğrulaması için.
+Alıcı: Neden kimlik gerekiyor?
+Satıcı: Platformun yeni kuralı, ödeme yapmadan önce zorunlu.
+Alıcı: Peki sadece ad-soyad yetmez mi?
+Satıcı: Hayır, kimlik fotoğrafı ve elinizde tutarken selfie lazım — sistemimizin şartı bu.
+
+# Düşünce: Kimlik ve selfie talebi — platform hiçbir zaman bu şekilde kimlik istemez. Kimlik avı girişimi.
+{
+  "verdict": "Kimlik fotoğrafı ve selfie talebi içeren kimlik avı girişimi — platform bu bilgileri asla istemez.",
+  "flags": [
+    {
+      "id": "KIMLIK_BELGE_TALEBI",
+      "category": "identity",
+      "evidence": "kimlik fotoğrafı ve elinizde tutarken selfie lazım",
+      "description": "Kimlik belgesi ve selfie fotoğrafı talep ediliyor — kişisel veri hırsızlığı girişimi."
+    }
+  ],
+  "recommended_actions": [
+    "Kimlik fotoğrafınızı asla göndermeyın.",
+    "Platformlar hiçbir zaman kimlik ve selfie birlikte istemez.",
+    "Bu mesajı platforma şikayet edin.",
+    "Aynı kişiden başka mesaj aldıysanız engel ve şikayet uygulayın."
+  ]
+}
+### ÖRNEK 9 — BİTİŞ
+
 ══════════════════════════════════════════════
 
 Şimdi analiz edilecek yazışma:

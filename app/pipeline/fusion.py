@@ -1,9 +1,8 @@
 """Stage 5: log-odds risk fusion — no LLM.
 
-Formula:  logit = B0 + Σ(weight_i * flag_i)
+Formula:  logit = B0 + Σ(weight_i * flag_i) + Σ(interaction_bonus_j)
           P = sigmoid(logit),  score = round(P * 100)
 
-Interaction rule: ODEME_PLATFORM_DISI ∧ LINK_SAHTE_KARGO → +1.5 bonus.
 Override: any flag with severity="kritik" forces risk_level to "yuksek".
 """
 from __future__ import annotations
@@ -14,7 +13,14 @@ from app.schemas import AnalysisResult, Flag, LinkAnalysis
 from app.taxonomy import FLAGS
 
 B0: float = -1.4
-INTERACTION_BONUS: float = 1.5
+
+# (flag_id_set, bonus) — all flags in set must be present to apply bonus.
+_INTERACTION_RULES: list[tuple[frozenset[str], float]] = [
+    (frozenset({"ODEME_PLATFORM_DISI", "LINK_SAHTE_KARGO"}), 1.5),
+    (frozenset({"ODEME_KAPORA", "DAVRANIS_ACILIYET"}), 0.8),
+    (frozenset({"FIYAT_COK_DUSUK", "ODEME_KAPORA"}), 0.7),
+    (frozenset({"DAVRANIS_PLATFORM_DISINA_CIKMA", "ODEME_PLATFORM_DISI"}), 0.6),
+]
 
 
 def _sigmoid(x: float) -> float:
@@ -39,9 +45,11 @@ def fuse(
         signal_contributions[flag.id] = w
         logit += w
 
-    if "ODEME_PLATFORM_DISI" in flag_ids and "LINK_SAHTE_KARGO" in flag_ids:
-        signal_contributions["ODEME_PLATFORM_DISI + LINK_SAHTE_KARGO"] = INTERACTION_BONUS
-        logit += INTERACTION_BONUS
+    for rule_ids, bonus in _INTERACTION_RULES:
+        if rule_ids.issubset(flag_ids):
+            key = " + ".join(sorted(rule_ids))
+            signal_contributions[key] = bonus
+            logit += bonus
 
     probability = _sigmoid(logit)
     risk_score = round(probability * 100)

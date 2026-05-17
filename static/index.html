@@ -728,10 +728,20 @@ body {
   .pane-right { padding: 24px 18px 60px; }
   .patterns { grid-template-columns: 1fr; }
   .result-top { grid-template-columns: 1fr; }
-  .gauge-wrap { margin: 0; }
+  .gauge-wrap { margin: 0; width: 140px; height: 140px; }
+  .gauge-wrap svg { width: 140px; height: 140px; }
+  .gauge-score { font-size: 2rem; }
   .bar-row { grid-template-columns: 110px 1fr 36px; gap: 8px; }
   .composer-foot { flex-direction: column; align-items: stretch; }
   .primary { justify-content: center; }
+}
+@media (max-width: 480px) {
+  .gauge-wrap { width: 110px; height: 110px; }
+  .gauge-wrap svg { width: 110px; height: 110px; }
+  .gauge-score { font-size: 1.6rem; }
+  .bar-row { grid-template-columns: 80px 1fr 30px; font-size: 12px; }
+  .flag { padding: 14px 16px; }
+  .pattern { padding: 12px 14px; }
 }
   </style>
 </head>
@@ -743,27 +753,8 @@ body {
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
-/* ── Taxonomy ── */
-const TAX = {
-  ODEME_PLATFORM_DISI:            { severity:"kritik", label:"Platform dışı ödeme" },
-  ODEME_SAHTE_DEKONT:             { severity:"kritik", label:"Sahte dekont" },
-  LINK_SAHTE_KARGO:               { severity:"kritik", label:"Sahte kargo linki" },
-  LINK_KART_BILGISI:              { severity:"kritik", label:"Kart bilgisi linki" },
-  ODEME_KAPORA:                   { severity:"yuksek", label:"Kapora talebi" },
-  ODEME_KRIPTO:                   { severity:"yuksek", label:"Kripto ödeme" },
-  KARGO_UCRET_TUZAGI:             { severity:"yuksek", label:"Kargo ücret tuzağı" },
-  DAVRANIS_PLATFORM_DISINA_CIKMA: { severity:"yuksek", label:"Platform dışına çıkma" },
-  KIMLIK_IBAN_ISIM_UYUSMAZLIGI:   { severity:"yuksek", label:"IBAN isim uyuşmazlığı" },
-  ODEME_KOMISYON_SOYLEMI:         { severity:"orta",   label:"Komisyon kaçınması" },
-  FIYAT_COK_DUSUK:                { severity:"orta",   label:"Piyasanın altı fiyat" },
-  DAVRANIS_ACILIYET:              { severity:"orta",   label:"Aciliyet baskısı" },
-  DAVRANIS_TUTARSIZ_HIKAYE:       { severity:"orta",   label:"Tutarsız hikaye" },
-  HESAP_GECMISSIZ:                { severity:"orta",   label:"Geçmişsiz hesap" },
-  ILAN_BELIRSIZ:                  { severity:"dusuk",  label:"İlan belirsizliği" },
-  PLATFORM_ICI_GUVENCE:           { severity:"dusuk",  label:"Platform içi güvence" },
-  HESAP_KOKLU:                    { severity:"dusuk",  label:"Köklü hesap" },
-  WEB_SIKAYET_KAYDI:              { severity:"yuksek", label:"Web şikayet kaydı" },
-};
+/* ── Taxonomy context — populated from /api/flags on mount ── */
+const TaxContext = React.createContext({});
 const SEV = {
   kritik: { label:"Kritik",  c:"oklch(0.55 0.20 25)",  soft:"oklch(0.55 0.20 25 / 0.10)",  border:"oklch(0.55 0.20 25 / 0.30)" },
   yuksek: { label:"Yüksek",  c:"oklch(0.62 0.17 50)",  soft:"oklch(0.62 0.17 50 / 0.10)",  border:"oklch(0.62 0.17 50 / 0.30)" },
@@ -798,7 +789,19 @@ function App() {
   const [thinkingText, setThinkingText]   = useState('');
   const [completedStages, setCompletedStages] = useState([]);
   const [currentStage, setCurrentStage]   = useState('');
+  const [tax, setTax]                     = useState({});
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/flags')
+      .then(r => r.json())
+      .then(list => {
+        const map = {};
+        list.forEach(f => { map[f.id] = { severity: f.severity, label: f.label }; });
+        setTax(map);
+      })
+      .catch(() => {}); // fail silently — FlagCard has fallback
+  }, []);
 
   const canAnalyze = text.trim().length > 0 || images.length > 0;
 
@@ -902,8 +905,17 @@ function App() {
   };
 
   return (
+    <TaxContext.Provider value={tax}>
     <div className="root">
-      <Header onOpenPrivacy={() => setShowPrivacy(true)} />
+      <Header
+        onOpenPrivacy={() => setShowPrivacy(true)}
+        onHowItWorks={() => {
+          setScreen('idle');
+          setTimeout(() => {
+            document.getElementById('how')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 60);
+        }}
+      />
       {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
 
       <main className="layout">
@@ -926,6 +938,7 @@ function App() {
               <textarea
                 className="composer-text"
                 placeholder="Yazışma metnini yapıştır…"
+                aria-label="Analiz edilecek yazışma metni"
                 value={text}
                 onChange={e => setText(e.target.value)}
                 disabled={screen !== 'idle'}
@@ -958,7 +971,8 @@ function App() {
                   )}
                 </div>
                 <button className="primary" onClick={onAnalyze}
-                        disabled={!canAnalyze || screen === 'loading'}>
+                        disabled={!canAnalyze || screen === 'loading'}
+                        aria-busy={screen === 'loading'}>
                   {screen === 'loading' ? 'Analiz ediliyor…' : 'Analiz et'}
                   {screen !== 'loading' && (
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -1006,13 +1020,14 @@ function App() {
         </section>
       </main>
     </div>
+    </TaxContext.Provider>
   );
 }
 
 /* ══════════════════════════════════════════════
    HEADER
 ══════════════════════════════════════════════ */
-function Header({ onOpenPrivacy }) {
+function Header({ onOpenPrivacy, onHowItWorks }) {
   return (
     <header className="header">
       <div className="brand">
@@ -1020,7 +1035,7 @@ function Header({ onOpenPrivacy }) {
         <span className="brand-word">kalkan</span>
       </div>
       <nav className="nav">
-        <a href="#how">Nasıl çalışır</a>
+        <button className="nav-link" onClick={onHowItWorks}>Nasıl çalışır</button>
         <button className="nav-link" onClick={onOpenPrivacy}>
           <IconShield2 /> Haklarınız &amp; gizlilik
         </button>
@@ -1044,6 +1059,10 @@ function Mark() {
    PRIVACY MODAL
 ══════════════════════════════════════════════ */
 function PrivacyModal({ onClose }) {
+  const TR_MONTHS = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  const now = new Date();
+  const lastUpdated = `${TR_MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -1085,7 +1104,7 @@ function PrivacyModal({ onClose }) {
           </li>
         </ul>
         <div className="modal-foot">
-          <span className="modal-foot-meta">Son güncelleme · Mayıs 2026</span>
+          <span className="modal-foot-meta">Son güncelleme · {lastUpdated}</span>
           <button className="primary" onClick={onClose}>Anladım</button>
         </div>
       </div>
@@ -1097,6 +1116,8 @@ function PrivacyModal({ onClose }) {
    IDLE PANEL
 ══════════════════════════════════════════════ */
 function IdlePanel({ onTryExample }) {
+  const tax = React.useContext(TaxContext);
+  const flagCount = Object.keys(tax).length || 18;
   const patterns = [
     { id:"LINK_SAHTE_KARGO",              title:"Sahte kargo bağlantıları",    desc:"araskargo.com.tr taklitleri, .online ve .info uzantıları" },
     { id:"ODEME_PLATFORM_DISI",           title:"Platform dışı ödeme talebi", desc:"WhatsApp / EFT / kapora yönlendirmeleri" },
@@ -1109,7 +1130,7 @@ function IdlePanel({ onTryExample }) {
     <div className="idle">
       <div className="idle-head" id="how">
         <div className="eyebrow ink">Kalkan ne tespit eder?</div>
-        <h2 className="idle-h">Pazaryeri yazışmalarında 18+ dolandırıcılık sinyali.</h2>
+        <h2 className="idle-h">Pazaryeri yazışmalarında {flagCount}+ dolandırıcılık sinyali.</h2>
       </div>
       <div className="patterns">
         {patterns.map(p => (
@@ -1259,7 +1280,8 @@ function Result({ data, onReset }) {
 }
 
 function FlagCard({ flag }) {
-  const meta = TAX[flag.id] || { severity:'orta', label: flag.id };
+  const tax = React.useContext(TaxContext);
+  const meta = tax[flag.id] || { severity:'orta', label: flag.id };
   const sev = SEV[meta.severity] || SEV.orta;
   return (
     <div className="flag" style={{borderLeftColor: sev.c}}>
@@ -1277,6 +1299,7 @@ function FlagCard({ flag }) {
 }
 
 function Bars({ contributions }) {
+  const tax = React.useContext(TaxContext);
   const entries = Object.entries(contributions).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
   const max = Math.max(...entries.map(([_,v]) => Math.abs(v)), 1);
   return (
@@ -1284,7 +1307,7 @@ function Bars({ contributions }) {
       {entries.map(([k, v]) => {
         const pct = Math.abs(v) / max * 100;
         const isGood = v < 0;
-        const meta = TAX[k] || {};
+        const meta = tax[k] || {};
         const sev = isGood ? SEV.dusuk : (SEV[meta.severity] || SEV.orta);
         return (
           <div className="bar-row" key={k}>
@@ -1334,8 +1357,8 @@ function Gauge({ score, tone }) {
   const r = 70, circ = 2 * Math.PI * r;
   const dash = circ * (shown / 100);
   return (
-    <div className="gauge-wrap">
-      <svg viewBox="0 0 180 180" width="180" height="180">
+    <div className="gauge-wrap" role="img" aria-label={`Risk skoru: ${score} / 100`}>
+      <svg viewBox="0 0 180 180" width="100%" height="100%">
         <circle cx="90" cy="90" r={r} stroke="var(--line)" strokeWidth="10" fill="none" />
         <circle cx="90" cy="90" r={r} stroke={tone.c} strokeWidth="10" fill="none"
                 strokeLinecap="round"

@@ -6,8 +6,10 @@ online complaint records. Falls back gracefully if the search call fails.
 """
 from __future__ import annotations
 
+import json
 import logging
 import pathlib
+import re
 
 from google import genai
 from google.genai import types
@@ -17,9 +19,16 @@ from app.schemas import ClassifyOutput, ExtractOutput, Flag
 from app.taxonomy import FLAGS, VALID_IDS
 from app.tools.domain_check import check_domain
 
+# Türk cep telefonu numarası örüntüsü (05xx veya +905xx)
+_PHONE_RE = re.compile(
+    r'(?<!\d)(?:0|\+90)?[- ]?5\d{2}[- ]?\d{3}[- ]?\d{2}[- ]?\d{2}(?!\d)'
+)
+
 logger = logging.getLogger(__name__)
 
 _PROMPT_PATH = pathlib.Path(__file__).parent.parent / "prompts" / "classify.txt"
+# Read once at import time — avoids repeated disk I/O on every request.
+_PROMPT_TEMPLATE: str = _PROMPT_PATH.read_text(encoding="utf-8")
 
 _client = genai.Client(api_key=settings.gemini_api_key)
 
@@ -52,7 +61,7 @@ _google_search_tool = types.Tool(google_search=types.GoogleSearch())
 
 
 def _build_prompt(extracted: ExtractOutput) -> str:
-    template = _PROMPT_PATH.read_text(encoding="utf-8")
+    template = _PROMPT_TEMPLATE
     flag_block = "\n".join(
         f"  {fid} ({FLAGS[fid].severity}, weight: {FLAGS[fid].log_odds_weight:+.1f})"
         for fid in sorted(VALID_IDS)
@@ -113,11 +122,12 @@ async def classify_stream(extracted: ExtractOutput, deep: bool = False):
     full_text = ""
 
     try:
-        async for chunk in _client.aio.models.generate_content_stream(
+        stream = await _client.aio.models.generate_content_stream(
             model=settings.gemini_model,
             contents=prompt,
             config=_cfg_standard,
-        ):
+        )
+        async for chunk in stream:
             for candidate in (chunk.candidates or []):
                 if not candidate.content:
                     continue
@@ -167,67 +177,82 @@ async def classify(extracted: ExtractOutput, deep: bool = False) -> ClassifyOutp
     return result
 
 
+def _extract_phones(turns: list[str]) -> list[str]:
+    """Yazışmadan Türk cep telefonu numaralarını çıkar."""
+    seen: set[str] = set()
+    phones: list[str] = []
+    for turn in turns:
+        for m in _PHONE_RE.finditer(turn):
+            normalized = re.sub(r"[^0-9+]", "", m.group())
+            if normalized not in seen:
+                seen.add(normalized)
+                phones.append(normalized)
+    return phones
+
+
 async def _deep_check(extracted: ExtractOutput, base: ClassifyOutput) -> ClassifyOutput:
-    """Search for online complaint records; appends WEB_SIKAYET_KAYDI if found."""
-    entities = "\n".join(extracted.urls + extracted.ibans)
-    prompt = (
-        "Bu yazışmada geçen IBAN, telefon ve domain adlarını şikayetvar.com ve "
-        "benzeri Türkçe şikayet sitelerinde kontrol et. "
-        "Şikayet bulunan her öğe için 'WEB_SIKAYET_KAYDI' yaz ve kanıt kaynağını belirt.\n\n"
-        f"Kontrol edilecek varlıklar:\n{entities}\n\n"
-        "Yazışma:\n" + "\n".join(extracted.turns)
+    """
+    Google Search ile şikayet kaydı ara; bulunursa WEB_SIKAYET_KAYDI bayrağı ekle.
+
+    İyileştirmeler:
+    - Yazışmadan telefon numaraları da çıkarılır
+    - Her varlık (URL, IBAN, telefon) için ayrı arama yönergesi
+    - Türkçe şikayet sitelerine odaklanan arama sorguları
+    """
+    phones = _extract_phones(extracted.turns)
+    all_entities = extracted.urls + extracted.ibans + phones
+
+    if not all_entities:
+        return base
+
+    entity_lines = "\n".join(f"- {e}" for e in all_entities)
+
+    # Sadece Google Search — function declaration ile aynı istekte kullanılamaz.
+    # Domain kontrolü deterministik aşamada zaten yapılıyor.
+    cfg_deep = types.GenerateContentConfig(tools=[_google_search_tool])
+
+    # Ask for structured JSON so we don't do fragile text-matching on the response.
+    json_prompt = (
+        "Aşağıdaki her varlık için Türkçe şikayet sitelerinde Google araması yap.\n"
+        "Hedef siteler: şikayetvar.com, dolandirici.com, Ekşi Sözlük, forumlarda uyarılar.\n\n"
+        "Kontrol listesi:\n"
+        f"{entity_lines}\n\n"
+        "Her varlık için '\"[varlık] dolandırıcı şikayet\"' ve '\"[varlık] sahte güvenilir mi\"' ara.\n\n"
+        "Sonucu YALNIZCA şu JSON formatında döndür (başka hiçbir şey yazma):\n"
+        '{"found": true|false, "entity": "<şikayetli varlık veya boş string>", '
+        '"source": "<kaynak site>", "summary": "<max 120 karakter özet>"}'
     )
 
-    contents: list = [prompt]
-    cfg_deep = types.GenerateContentConfig(tools=[_google_search_tool, _check_domain_tool])
+    resp = await _client.aio.models.generate_content(
+        model=settings.gemini_model,
+        contents=[json_prompt],
+        config=cfg_deep,
+    )
 
-    for _ in range(3):
-        resp = await _client.aio.models.generate_content(
-            model=settings.gemini_model,
-            contents=contents,
-            config=cfg_deep,
-        )
+    response_text = (resp.text or "").strip()
+    try:
+        # Strip markdown code fences if model wraps the JSON.
+        clean = re.sub(r"^```(?:json)?\s*|\s*```$", "", response_text, flags=re.DOTALL).strip()
+        parsed = json.loads(clean)
+        complaint_found = bool(parsed.get("found"))
+        complaint_entity = str(parsed.get("entity") or next(iter(all_entities), ""))
+        complaint_source = str(parsed.get("source") or "")
+        complaint_summary = str(parsed.get("summary") or "")
+    except Exception as parse_exc:
+        logger.warning("_deep_check: JSON parse failed (%s); raw=%s", parse_exc, response_text[:200])
+        complaint_found = False
+        complaint_entity = ""
+        complaint_source = ""
+        complaint_summary = ""
 
-        fn_calls = [
-            p.function_call
-            for c in (resp.candidates or [])
-            for p in (c.content.parts or [])
-            if p.function_call is not None
-        ]
-
-        if not fn_calls:
-            text = resp.text or ""
-            if "WEB_SIKAYET_KAYDI" in text and "WEB_SIKAYET_KAYDI" in VALID_IDS:
-                search_snippet = next(
-                    (ln for ln in text.splitlines() if "WEB_SIKAYET_KAYDI" in ln),
-                    text[:200],
-                )
-                # Use first URL/IBAN as evidence — it's already in the extracted corpus
-                # so verify stage won't drop this flag.
-                evidence_entity = next(
-                    iter(extracted.urls + extracted.ibans), search_snippet[:100]
-                )
-                if not any(f.id == "WEB_SIKAYET_KAYDI" for f in base.flags):
-                    base.flags.append(Flag(
-                        id="WEB_SIKAYET_KAYDI",
-                        category="web",
-                        evidence=evidence_entity,
-                        description=f"İnternette şikayet kaydı tespit edildi: {search_snippet[:200]}",
-                    ))
-            break
-
-        fn_responses = [
-            types.Part.from_function_response(
-                name="check_domain",
-                response=check_domain((fn_call.args or {}).get("url", "")),
-            )
-            for fn_call in fn_calls
-            if fn_call.name == "check_domain"
-        ]
-
-        if fn_responses:
-            contents = [prompt, resp.candidates[0].content, *fn_responses]
-        else:
-            break
+    if complaint_found and "WEB_SIKAYET_KAYDI" in VALID_IDS:
+        if not any(f.id == "WEB_SIKAYET_KAYDI" for f in base.flags):
+            description = f"Şikayet kaydı ({complaint_source}): {complaint_summary}"[:120]
+            base.flags.append(Flag(
+                id="WEB_SIKAYET_KAYDI",
+                category="web",
+                evidence=complaint_entity,
+                description=description,
+            ))
 
     return base
