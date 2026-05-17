@@ -1,0 +1,39 @@
+name: Security Audit
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Her Pazartesi 09:00 UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "requirements.txt"
+
+jobs:
+  audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: pip-audit kur
+        run: pip install pip-audit
+
+      - name: Bağımlılıkları tara
+        run: |
+          pip-audit -r requirements.txt \
+            --format markdown \
+            --output audit_report.md || true
+          echo "### pip-audit Raporu" >> $GITHUB_STEP_SUMMARY
+          cat audit_report.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Kritik CVE kontrolü
+        run: |
+          pip-audit -r requirements.txt \
+            --severity critical \
+            --fail-on-vuln

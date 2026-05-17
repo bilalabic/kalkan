@@ -1,0 +1,38 @@
+name: Docker Build
+
+on:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "requirements.txt"
+      - "app/**"
+      - "static/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Docker image build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker Buildx kur
+        uses: docker/setup-buildx-action@v3
+
+      - name: Image build (push yok)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: kalkan:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image boyutu raporla
+        run: |
+          SIZE=$(docker image inspect kalkan:pr-${{ github.event.pull_request.number }} \
+            --format='{{.Size}}' 2>/dev/null || echo "0")
+          MB=$((SIZE / 1024 / 1024))
+          echo "### Docker Image Boyutu: ${MB} MB" >> $GITHUB_STEP_SUMMARY

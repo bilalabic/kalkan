@@ -1,0 +1,53 @@
+name: Pipeline Eval
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "app/pipeline/**"
+      - "app/prompts/**"
+      - "app/taxonomy.py"
+      - "app/tools/**"
+      - "data/eval_set.jsonl"
+
+jobs:
+  eval:
+    name: Accuracy Check (Macro F1 ≥ 0.65)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run eval
+        id: eval
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python eval.py 2>&1 | tee eval_output.txt
+          MACRO_F1=$(grep "MacroF1" eval_output.txt | awk '{print $NF}')
+          echo "macro_f1=$MACRO_F1" >> $GITHUB_OUTPUT
+          echo "### Eval Sonuçları" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat eval_output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: F1 eşik kontrolü
+        run: |
+          MACRO_F1=${{ steps.eval.outputs.macro_f1 }}
+          echo "Macro F1: $MACRO_F1"
+          python -c "
+          f1 = float('$MACRO_F1')
+          threshold = 0.65
+          if f1 < threshold:
+              print(f'BAŞARISIZ: Macro F1 ({f1:.3f}) eşik değerinin ({threshold}) altında.')
+              exit(1)
+          print(f'BAŞARILI: Macro F1 = {f1:.3f} >= {threshold}')
+          "
